@@ -41,6 +41,23 @@ def warikan(message, price):
         }]
         message.send_webapi('', json.dumps(attachments))
 
+@respond_to(r'^status$')
+def status(message):
+    result = status_func()
+    if 'error' in result:
+        message.reply(result['error'])
+    elif result['price'] == 0:
+        message.reply('記録したよ！　ぴったり割り勘できたね！')
+    else:
+        formatted_price = '{:,}'.format(result["price"])
+        attachments = [{
+            'fallback': f'{result["from"]} → {result["to"]}: {result["price"]}',
+            'color': 'good',
+            'title': f'{result["from"]} → {result["to"]}',
+            'text': f'{formatted_price} 円'
+        }]
+        message.send_webapi('', json.dumps(attachments))
+
 
 def reset_func():
     print('Reset')
@@ -96,4 +113,34 @@ def warikan_func(name, price):
         return result
     except (Exception, psycopg2.Error) as error:
         print("Error in update operation", error)
+        return {'error': error}
+
+def status_func():
+    try:
+        with psycopg2.connect(settings.DATABASE_URL, sslmode='require') as db:
+            with db.cursor(cursor_factory=DictCursor) as cur:
+                cur.execute('SELECT * FROM warikan')
+                data = cur.fetchall()
+                df = {}
+                if not data:
+                    df = {settings.USER1: 0, settings.USER2: 0}
+                else:
+                    for d in data:
+                        df[d[0]] = d[1]
+                result = {}
+                if df[settings.USER1] > df[settings.USER2]:
+                    df[settings.USER1] -= df[settings.USER2]
+                    df[settings.USER2] = 0
+                    diff = df[settings.USER1] // 2
+                    result = {'from': settings.USERNAME2,
+                              'to': settings.USERNAME1, 'price': diff}
+                else:
+                    df[settings.USER2] -= df[settings.USER1]
+                    df[settings.USER1] = 0
+                    diff = df[settings.USER2] // 2
+                    result = {'from': settings.USERNAME1,
+                              'to': settings.USERNAME2, 'price': diff}
+        return result
+    except (Exception, psycopg2.Error) as error:
+        print("Error in select operation", error)
         return {'error': error}
