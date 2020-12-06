@@ -17,9 +17,11 @@ def reset(message):
         message.reply('リセット失敗！　また今度試してね')
 
 
-@respond_to(r'^([-+]?\d*)[ 　]')
-@listen_to(r'^([-+]?\d*)[ 　]')
+@respond_to(r'^([-+]?\d+)[ 　]?')
 def warikan(message, price):
+    print(message.body['channel'])
+    print(message.user['name'])
+    print(price)
     if message.body['channel'] != settings.CHANNEL_ID:
         return
     if message.user['name'] not in [settings.USER1, settings.USER2]:
